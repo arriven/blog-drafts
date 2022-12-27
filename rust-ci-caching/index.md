@@ -81,6 +81,7 @@ I'll be using the following cache configuration to test it out (called `home_and
       ~/.cargo/registry/index/
       ~/.cargo/registry/cache/
       ~/.cargo/git/db/
+      target/
     key: ${{ runner.os }}-home_and_target-${{ hashFiles('**/Cargo.lock') }}
 ```
 
@@ -138,6 +139,8 @@ $ cargo test --locked --no-run
     Finished test [unoptimized + debuginfo] target(s) in 0.62s
   Executable unittests src/main.rs (target/debug/deps/linkmapper-da17f15a9210ca29)
 ```
+
+I've never seen this approach being used even though the only downside to this approach I know of is that it completely replicates the way `cargo` caches dependencies locally: if you ever had cases where it didn't pick up changes to the code introduced by `git pull` or similar - there's a non-zero chance you can encounter that on CI. Manually cleaning caches on github is fairly easy and you can even use PR labels to conditionally disable cache usage so my guess is that this approach isn't widely adopted because most people just don't know about it (this is kind of confirmed by people who were reviewsing the draft of this article).
 
 **Except if we use `rocksdb` instead of `sled`**
 
@@ -228,12 +231,11 @@ sccache:
     - run: cargo test --locked --no-run
     - run: cargo test --locked --no-fail-fast
     - run: cargo clippy --locked --workspace --tests --no-deps -- -D warnings
-
 ```
 
 ## Results
 
-In the end, I'd like to bring you a comparison table of all the approaches covered here. Please note that Github Actions public runners can fluctuate in performance so I did notice some runs take +-25% more or less time to complete without any changes to the code or action but it should still be enough to see general tendencies
+In the end, I'd like to bring you a comparison table of all the approaches covered here. Please note that Github Actions public runners can fluctuate in performance so I did notice some runs take +-25% more or less time to complete without any changes to the code or action but it should still be enough to see general tendencies (but it does lead to some weird results like when enabling mtime restore for `sccache` action leads to 20-40s slowdown, even though mtime doesn't affect the work done in the slightest)
 
 ### Using `sled` for storage (happy path)
 
@@ -255,4 +257,4 @@ In the end, I'd like to bring you a comparison table of all the approaches cover
 | swatinem | 730 mb | 15s | 23s | 9m 0s | 8m 26s | 10m 16s |
 | sccache | 490 mb | 25s | 10s | 13m 58s | 2m 10s | 2m 50s |
 
-As you can notice, neither caching recommended folders from `$CARGO_HOME` and `target` nor using `Swatinem/rust-cache` didn't bring any substantial speedup to the `rocksdb`-based service. I suspect that this happens due to the usage of `bindgen` (or C/C++ code overall) in `rocksdb` but can't confirm that for now. I also hope to get this info included into the cargo book to make this article less necessary but for now it may save some time to someone who's looking into speeding up their rust CI workflows
+As you can notice, the only ways to cache packages like `rocksdb` are caching the whole `$CARGO_HOME` folder our using a third-party tool like `sccache`
