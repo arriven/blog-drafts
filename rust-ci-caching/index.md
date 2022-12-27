@@ -257,4 +257,4 @@ In the end, I'd like to bring you a comparison table of all the approaches cover
 | swatinem | 730 mb | 15s | 23s | 9m 0s | 8m 26s | 10m 16s |
 | sccache | 490 mb | 25s | 10s | 13m 58s | 2m 10s | 2m 50s |
 
-As you can notice, the only ways to cache packages like `rocksdb` are caching the whole `$CARGO_HOME` folder our using a third-party tool like `sccache`
+As you can notice, the only ways to cache packages like `rocksdb` are caching the whole `$CARGO_HOME` folder or using a third-party tool like `sccache`
