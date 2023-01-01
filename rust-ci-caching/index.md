@@ -239,9 +239,19 @@ sccache:
 
 In the end, I'd like to bring you a comparison table of all the approaches covered here. Please note that Github Actions public runners can fluctuate in performance so I did notice some runs take +-25% more or less time to complete without any changes to the code or action but it should still be enough to see general tendencies (but it does lead to some weird results like when enabling mtime restore for `sccache` action leads to 20-40s slowdown, even though mtime doesn't affect the work done in the slightest)
 
+### `cache profile` overview
+
+I already tried to reference each profile in the article but it probably won't hurt to also have these definitions next to where they are used so you don't have to look for them each time
+
+- `home` - only caching recommended folders from `$CARGO_HOME` without any caching of build artifacts (eliminates `crates.io` sync)
+- `home_and_target` - caching recommended folders from `$CARGO_HOME` + whole `target` folder
+- `full` - caching whole `$CARGO_HOME` + whole `target` folders
+- `swatinem` - using `Swatinem/rust-cache@v2` as is (it uses the same set of folders as `home_and_target` but does additional cleanup to only cache dependencies)
+- `sccache` - using `mozilla/sccache` and caching recommended folders from `$CARGO_HOME` (`$CARGO_HOME/git/db`, `$CARGO_HOME/registry/index`, `$CARGO_HOME/registry/cache`) + sccache cache folder (`$SCCACHE_DIR`) without caching build artifacts themselves
+
 ### Using `sled` for storage (happy path)
 
-| cache type | cache size | toolchain + job setup time | cache sync time | first run (no cache) | second run (cache, no mtime restore) | third run (cache, mtime restore) |
+| cache profile | cache size | toolchain + job setup time | cache sync time | first run (no cache) | second run (cache, no mtime restore) | third run (cache, mtime restore) |
 | --- | --- | --- | --- | --- | --- | --- |
 | home | 86 mb | 15s | 2s | 1m 50s | 1m 27s | 1m 27s |
 | home_and_target| 250 mb | 15s | 8s | 2m 8s | 31s | 29s |
@@ -251,7 +261,7 @@ In the end, I'd like to bring you a comparison table of all the approaches cover
 
 ### Using `rocksdb` for storage (unhappy path)
 
-| cache type | cache size | toolchain + job setup time | cache sync time | first run (no cache) | second run (cache, no mtime restore) | third run (cache, mtime restore) |
+| cache profile | cache size | toolchain + job setup time | cache sync time | first run (no cache) | second run (cache, no mtime restore) | third run (cache, mtime restore) |
 | --- | --- | --- | --- | --- | --- | --- |
 | home | 100 mb | 15s | 2s | 8m 53s | 8m 26s | 8m 38s |
 | home_and_target| 780 mb | 15s | 25s | 10m 11s | 10m 40s | 8m 28s |
@@ -259,4 +269,4 @@ In the end, I'd like to bring you a comparison table of all the approaches cover
 | swatinem | 730 mb | 15s | 23s | 9m 0s | 8m 26s | 10m 16s |
 | sccache | 490 mb | 25s | 10s | 13m 58s | 2m 10s | 2m 50s |
 
-As you can notice, the only ways to cache packages like `rocksdb` are caching the whole `$CARGO_HOME` folder or using a third-party tool like `sccache`
+As you can notice, until [this](https://github.com/rust-lang/cargo/issues/11083) is resolved, the only ways to cache packages like `rocksdb` are caching the whole `$CARGO_HOME` folder or using a third-party tool like `sccache`
