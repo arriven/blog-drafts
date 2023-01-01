@@ -144,7 +144,7 @@ I've never seen this approach being used even though the only downside to this a
 
 **Except if we use `rocksdb` instead of `sled`**
 
-For some reason not including `$CARGO_HOME/registry/src` to the cache leads to full recompilation of `librocksdb-sys` and everything that depends on it (I suspect `bindgen` as the culprit but this needs further testing):
+For some reason not including `$CARGO_HOME/registry/src` to the cache leads to full recompilation of `librocksdb-sys` and everything that depends on it (~I suspect `bindgen` as the culprit but this needs further testing~ Edit: it turns out there's an [issue](https://github.com/rust-lang/cargo/issues/11083) and it's caused by `rocksdb` using `rerun-if-changed` on a folder in `build.rs`):
 
 ```sh
 $ cargo test --locked --no-run
@@ -169,6 +169,8 @@ Yes, it takes more than 9 minutes to compile `rocksdb` on the github runner. Thi
 ```
 
 **Note:** based on my [tests](https://github.com/arriven/rust-ci-playground/actions/runs/3782411644/jobs/6430124523) it seems like even just adding `$CARGO_HOME/registry/src` to the `home_and_target` cache is enought to fix this, but since `$CARGO_HOME` content is unstable it's safer to just cache the full thing, it's not that much overhead compared to the `target` folder size.
+
+**Note 2:** similar issue occurs if you have a git-based dependency and don't include `$CARGO_HOME/git/checkouts` into the cache, except in that case it also forces cargo to re-download any git submodule that package depends on
 
 ```sh
 $ cargo test --locked --no-run
